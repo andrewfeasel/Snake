@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake</title>
+    <style>
+        body {
+            font-family: monospace;
+            font-size: 24px;
+        }
+
+        table {
+            border: solid black 2px;
+            border-collapse: collapse;
+        }
+
+        td {
+            text-align: center;
+            height: 40px;
+            width: 40px;
+            line-height: 40px;
+        }
+
+        .snake-head {
+            color: green;
+            font-weight: bold;
+        }
+
+        .snake-body {
+            color: green;
+        }
+
+        .food {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <center>
+        <h3>Snake</h3>
+        <div>
+        <p id="score">Score: 0</p>
+        <p id="highscore">High Score: 0</p>
+        </div>
+        <table id="game">
+            <tbody id="grid"></tbody>
+        </table>
+        <button onclick="newGame()">New Game</button>
+        <p>Controls: WASD. <br>Made by Andrew Feasel. Contact: feaseand000@student.evergreenps.org</p>
+    </center>
+    <script>
+        const gridSize = 10;
+
+        // Initialize grid
+        const gridElement = document.getElementById('grid');
+
+        // Initialize game variables
+        let game, cells;
+        let snake;
+        let direction, directionQueue;
+        let food;
+        let isGameOver;
+        let score;
+        let gameInterval;
+
+        // Initialize score
+        const highScore = localStorage.getItem('highScore') || 0;
+        document.getElementById("highscore").textContent = "High Score: " + highScore;
+
+        function newGame() {
+            // Reset the grid and cells
+            gridElement.innerHTML = Array.from({ length: gridSize }, () =>
+                '<tr>' + '<td></td>'.repeat(gridSize) + '</tr>').join('');
+
+            game = document.getElementById("game");
+            cells = Array.from(game.getElementsByTagName("td"));
+
+            // Reset game state
+            snake = [44]; // Initial position roughly in the center
+            direction = 1; // Default direction to the right
+            directionQueue = [];
+            food = null;
+            isGameOver = false;
+            score = 0;
+
+            // Reset displays
+            document.getElementById("score").textContent = "Score: " + score;
+
+            // Reset game interval
+            if (gameInterval) {
+                clearInterval(gameInterval);
+            }
+            gameInterval = setInterval(update, 250); // Set consistent update interval
+
+            // Place the food and render the starting state
+            placeFood();
+            render();
+        }
+
+        function render() {
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = '';
+            });
+
+            cells[snake[0]].textContent = '[]'; // Head of the snake
+            cells[snake[0]].classList.add('snake-head');
+
+            snake.slice(1).forEach(index => {
+                cells[index].textContent = '[]'; // Body of the snake
+                cells[index].classList.add('snake-body');
+            });
+
+            if (food !== null) {
+                cells[food].textContent = '[]'; // Food
+                cells[food].classList.add('food');
+            }
+
+            document.getElementById("score").textContent = "Score: " + score;
+        }
+
+        function placeFood() {
+            do {
+                food = Math.floor(Math.random() * gridSize * gridSize);
+            } while (snake.includes(food));
+            render();
+        }
+
+        function update() {
+            if (isGameOver) return;
+
+            if (directionQueue.length) {
+                const newDir = directionQueue.shift();
+                if (newDir !== -direction) {
+                    direction = newDir;
+                }
+            }
+
+            let newHead = snake[0] + direction;
+
+            if (
+                newHead < 0 ||
+                newHead >= gridSize * gridSize ||
+                (direction === 1 && newHead % gridSize === 0) ||
+                (direction === -1 && (newHead + 1) % gridSize === 0) ||
+                snake.includes(newHead)
+            ) {
+                isGameOver = true;
+                clearInterval(gameInterval);
+                setTimeout(shrinkAndShowX, 300);
+                return;
+            }
+
+            snake.unshift(newHead);
+
+            if (newHead === food) {
+                score++;
+                placeFood();
+            } else {
+                snake.pop();
+            }
+
+            render();
+        }
+
+        function changeDirection(event) {
+            if (isGameOver) return;
+
+            const keyDirection = {
+                "w": -gridSize, // Up
+                "s": gridSize,  // Down
+                "a": -1,        // Left
+                "d": 1          // Right
+            };
+
+            const newDir = keyDirection[event.key];
+            if (newDir !== undefined && newDir !== -direction) {
+                directionQueue.push(newDir);
+            }
+        }
+
+        function shrinkAndShowX() {
+            const shrinkInterval = setInterval(() => {
+                if (snake.length <= 1) {
+                    clearInterval(shrinkInterval);
+                    cells[snake[0]].textContent = 'X';
+                    return;
+                }
+
+                const segment = snake.pop();
+                cells[segment].textContent = '';
+                cells[segment].className = '';
+
+                render();
+            }, 150);
+        }
+
+        document.addEventListener("keydown", changeDirection);
+
+        // Start the first game
+        newGame();
+    </script>
+</body>
+</html>
